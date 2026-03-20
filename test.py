@@ -1,29 +1,32 @@
 import cv2
 import numpy as np
 
+# 读图
 def process_bubble_image_robust(image_path, output_path="result.jpg"):
     img = cv2.imread(image_path)
     if img is None:
         print("图片读取失败")
         return 0, None
 
+    # 数据降维与预处理
     # 统一缩放到可控尺寸，后续阈值和面积参数更稳定。
-    img = cv2.resize(img, None, fx=0.25, fy=0.25)
-    img_result = img.copy()
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    h, w = gray.shape
+    img = cv2.resize(img, None, fx=0.25, fy=0.25) # 把图片的长和宽都缩小到原来的四分之一
+    img_result = img.copy() # 留一个彩色图的备份，最后用来画绿圈圈展示
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 转化为灰度图
+    h, w = gray.shape # 获取缩小后图像的高度和宽度
 
     # 1) 自动找圆盘样本区域：选取靠下的候选圆，避免固定矩形 ROI 带来的偏差。
-    blur_for_circle = cv2.GaussianBlur(gray, (9, 9), 2)
-    circles = cv2.HoughCircles(
-        blur_for_circle,
-        cv2.HOUGH_GRADIENT,
-        dp=1.2,
-        minDist=max(40, h // 8),
-        param1=120,
-        param2=35,
-        minRadius=max(40, int(min(h, w) * 0.10)),
-        maxRadius=int(min(h, w) * 0.48),
+    blur_for_circle = cv2.GaussianBlur(gray, (9, 9), 2) # 高斯模糊
+    circles = cv2.HoughCircles( # 找圆 opencv里的霍夫圆变换函数（专门用来在图片里找圆）
+        # 核心“遍历试圆”，找到图片里的圆形
+        blur_for_circle, # 输入图（必须是灰度图）
+        cv2.HOUGH_GRADIENT, # 检测方法，这个是默认的（唯一可用的圆检测方法）
+        dp=1.2,             # 累加器分辨率
+        minDist=max(40, h // 8), # 两个圆之间的最小距离（像素）
+        param1=120,  # 边缘检测的阈值
+        param2=35,   # 圆的“匹配严格程度”
+        minRadius=max(40, int(min(h, w) * 0.10)), # 要找的圆的最小半径（像素）
+        maxRadius=int(min(h, w) * 0.48),          # 要找的圆的最大半径（像素）
     )
 
     if circles is None:
